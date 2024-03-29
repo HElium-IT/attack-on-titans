@@ -8,7 +8,7 @@ import logging
 
 logger = logging.getLogger("report")
 
-from __init__ import PROTOCOL_FOLDER
+from __init__ import PROTOCOL_FOLDER, MAX_RUCURSION_DEPTH, URL_GUARD
 
 
 def save_response(target: str, protocol: str, file_name: str, content: str):
@@ -89,14 +89,20 @@ def httpx_scan(target_ip: str):
     for protocol in ["http", "https"]:
         url = f"{protocol}://{target_ip}"
         success, content = get_website_content(url)
-        save_response(target_ip, protocol, protocol, content)
+        if "/" in target_ip:
+            filename = "/".join(target_ip.split("/")[1:])
+        else:
+            filename = target_ip
+        save_response(target_ip, protocol, filename, content)
 
         if not success:
             continue
 
-        logger.info(f"Scanning all sub-links...")
+        logger.info(
+            f"Scanning all sub-links with recursion depth {MAX_RUCURSION_DEPTH}"
+        )
         links = get_all_website_links(url, content)
-        logger.info(f"Found {len(links)} links:")
+        logger.info(f"Found {len(links)} links in total.")
         for link in links:
             success, content = get_website_content(link[0])
             save_response(target_ip, protocol, link[1], content)
@@ -116,20 +122,36 @@ def get_website_content(url: str):
         return (False, f"[ERROR] {e}")
 
 
-def get_all_website_links(target, response_text):
+def is_valid_url(url, base_url):
+    """Controlla se l'URL è valido e appartiene allo stesso dominio."""
+    parsed_url = urlparse(url)
+    for guard in URL_GUARD:
+        if guard in parsed_url.path:
+            logger.debug(f"Guarded URL: {url}")
+            return False
+    return bool(parsed_url.netloc) and parsed_url.netloc == urlparse(base_url).netloc
+
+
+def cached(func):
+    cache = {}
+
+    def wrapper(*args):
+        if args[0] not in cache:
+            cache[args[0]] = func(*args)
+        return cache[args[0]]
+
+    return wrapper
+
+
+@cached
+def get_all_website_links(target, response_text, recursion_depth=MAX_RUCURSION_DEPTH):
     """Restituisce tutti i link URL trovati nella `url` fornita."""
 
-    def is_valid_url(url, base_url):
-        """Controlla se l'URL è valido e appartiene allo stesso dominio."""
-        parsed_url = urlparse(url)
-        return (
-            bool(parsed_url.netloc) and parsed_url.netloc == urlparse(base_url).netloc
-        )
+    spaces = "  " * (MAX_RUCURSION_DEPTH - recursion_depth)
+    logger.info(f"{spaces}Scanning {target}")
 
     urls = set()
-
     soup = BeautifulSoup(response_text, "html.parser")
-
     for a_tag in soup.findAll("a"):
         href = a_tag.attrs.get("href")
         if href == "" or href is None:
@@ -143,4 +165,10 @@ def get_all_website_links(target, response_text):
             continue
 
         urls.add(((composed_href, parsed_href.path)))
+
+    url_lun = len(urls)
+    logger.info(f"{spaces}Found {url_lun} links.")
+    for url, _ in list(urls):
+        if recursion_depth > 0:
+            urls |= get_all_website_links(url, httpx.get(url).text, recursion_depth - 1)
     return urls

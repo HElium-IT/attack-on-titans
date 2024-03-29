@@ -1,8 +1,10 @@
+import datetime
 import logging
 import logging.config
-from scan import nmap_scan, httpx_scan
+import shutil
 import argparse
 
+from scan import nmap_scan, httpx_scan
 from __init__ import TARGET_FOLDER
 
 
@@ -19,7 +21,7 @@ def setup_logger(target_ip: str):
             "file": {
                 "level": "DEBUG",
                 "class": "logging.FileHandler",
-                "filename": f"{TARGET_FOLDER(target_ip).joinpath('report.log')}",
+                "filename": f"{TARGET_FOLDER(target_ip, True).joinpath('report.log')}",
                 "formatter": "simple",
                 "mode": "w",
             },
@@ -73,6 +75,11 @@ def main():
 
         if args.scan_httpx:
             httpx_scan(args.target)
+
+    now_str = datetime.datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
+    shutil.make_archive(
+        f"{TARGET_FOLDER(args.target)}_{now_str}", "zip", TARGET_FOLDER(args.target)
+    )
 
 
 if __name__ == "__main__":
