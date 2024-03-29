@@ -11,6 +11,10 @@ REPORTS_FOLDER = THIS_FOLDER.joinpath("reports")
 if not REPORTS_FOLDER.exists():
     REPORTS_FOLDER.mkdir()
 
+REPORTS_ZIP_FOLDER = THIS_FOLDER.joinpath("reports_zip")
+if not REPORTS_ZIP_FOLDER.exists():
+    REPORTS_ZIP_FOLDER.mkdir()
+
 
 def get_target_folder(target, clear=False):
     def clear_dir(dir):

@@ -5,7 +5,7 @@ import shutil
 import argparse
 
 from scan import nmap_scan, httpx_scan
-from __init__ import TARGET_FOLDER
+from __init__ import TARGET_FOLDER, REPORTS_ZIP_FOLDER
 
 
 def setup_logger(target_ip: str):
@@ -77,9 +77,10 @@ def main():
             httpx_scan(args.target)
 
     now_str = datetime.datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
-    shutil.make_archive(
-        f"{TARGET_FOLDER(args.target)}_{now_str}", "zip", TARGET_FOLDER(args.target)
+    archive_path = REPORTS_ZIP_FOLDER.joinpath(
+        f"{args.target.replace('/','_')}_{now_str}"
     )
+    shutil.make_archive(archive_path, "zip", TARGET_FOLDER(args.target))
 
 
 if __name__ == "__main__":
