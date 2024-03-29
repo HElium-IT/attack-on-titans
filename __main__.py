@@ -3,37 +3,41 @@ import logging.config
 from scan import nmap_scan, httpx_scan
 import argparse
 
-logging_configs = {
-    "version": 1,
-    "disable_existing_loggers": False,
-    "formatters": {
-        "simple": {
-            "format": "[%(asctime)s] %(message)s",
+from __init__ import TARGET_FOLDER
+
+
+def setup_logger(target_ip: str):
+    logging_configs = {
+        "version": 1,
+        "disable_existing_loggers": False,
+        "formatters": {
+            "simple": {
+                "format": "[%(asctime)s] %(message)s",
+            },
         },
-    },
-    "handlers": {
-        "file": {
-            "level": "DEBUG",
-            "class": "logging.FileHandler",
-            "filename": "report.log",
-            "formatter": "simple",
-            "mode": "w",
+        "handlers": {
+            "file": {
+                "level": "DEBUG",
+                "class": "logging.FileHandler",
+                "filename": f"{TARGET_FOLDER(target_ip).joinpath('report.log')}",
+                "formatter": "simple",
+                "mode": "w",
+            },
+            "console": {
+                "level": "INFO",
+                "class": "logging.StreamHandler",
+                "stream": "ext://sys.stdout",
+                "formatter": "simple",
+            },
         },
-        "console": {
-            "level": "INFO",
-            "class": "logging.StreamHandler",
-            "stream": "ext://sys.stdout",
-            "formatter": "simple",
+        "loggers": {
+            "report": {
+                "handlers": ["file", "console"],
+                "level": "DEBUG",
+            },
         },
-    },
-    "loggers": {
-        "report": {
-            "handlers": ["file", "console"],
-            "level": "DEBUG",
-        },
-    },
-}
-logging.config.dictConfig(logging_configs)
+    }
+    logging.config.dictConfig(logging_configs)
 
 
 def parser_args():
@@ -58,6 +62,7 @@ def parser_args():
 
 def main():
     args = parser_args()
+    setup_logger(args.target)
 
     if args.scan:
         nmap_scan(args.target)

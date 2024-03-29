@@ -1,4 +1,3 @@
-import os
 import nmap
 import httpx
 from pathlib import Path
@@ -9,17 +8,14 @@ import logging
 
 logger = logging.getLogger("report")
 
+from __init__ import PROTOCOL_FOLDER
 
-def save_response(target: str, file_name: str, content: str):
-    # target folder, url.html file
-    target_folder = Path(target)
-    if not target_folder.exists():
-        target_folder.mkdir()
 
+def save_response(target: str, protocol: str, file_name: str, content: str):
     if "/" in file_name:
         file_name = file_name.replace("/", "_")
 
-    file_path = target_folder.joinpath(file_name)
+    file_path = PROTOCOL_FOLDER(target, protocol).joinpath(file_name)
     file_path.write_text(content)
 
 
@@ -93,7 +89,7 @@ def httpx_scan(target_ip: str):
     for protocol in ["http", "https"]:
         url = f"{protocol}://{target_ip}"
         success, content = get_website_content(url)
-        save_response(target_ip, f"{protocol}.html", content)
+        save_response(target_ip, protocol, protocol, content)
 
         if not success:
             continue
@@ -103,7 +99,7 @@ def httpx_scan(target_ip: str):
         logger.info(f"Found {len(links)} links:")
         for link in links:
             success, content = get_website_content(link[0])
-            save_response(target_ip, f"{protocol}_{link[1]}", content)
+            save_response(target_ip, protocol, link[1], content)
 
 
 def get_website_content(url: str):
